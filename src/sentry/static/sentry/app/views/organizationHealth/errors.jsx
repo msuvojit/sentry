@@ -1,7 +1,6 @@
 import {Box, Flex} from 'grid-emotion';
 import PropTypes from 'prop-types';
 import React from 'react';
-import moment from 'moment';
 import styled from 'react-emotion';
 
 import {TableChart} from 'app/components/charts/tableChart';
@@ -21,18 +20,6 @@ import withOrganization from 'app/utils/withOrganization';
 import HealthContext from './util/healthContext';
 import HealthRequest from './util/healthRequest';
 
-function GIVE_DATA(size) {
-  return [...Array(size)].map(() => (Math.random() * 1000) % 1000);
-}
-const TMPSIZE = 7;
-const START_DATE = moment().subtract(TMPSIZE, 'days');
-const ERROR_TYPE_DATA = [
-  ['TypeError', 50, 40, 30],
-  ['SyntaxError', 40, 30, 20],
-  ['NameError', 30, 20, 10],
-  ['ZeroDivisionError', 20, 10, 0],
-];
-
 const OrganizationHealthErrors = styled(
   class extends React.Component {
     render() {
@@ -49,65 +36,33 @@ const OrganizationHealthErrors = styled(
           </Flex>
 
           <Flex>
-            <StyledPanelChart
-              height={200}
-              startDate={START_DATE}
-              title={t('Errors')}
-              series={[
-                {
-                  seriesName: 'Crash',
-                  data: GIVE_DATA(TMPSIZE),
-                },
-                {
-                  seriesName: 'Handled',
-                  data: GIVE_DATA(TMPSIZE),
-                },
-              ]}
-              lines={[
-                {
-                  seriesName: 'Previous Period',
-                  data: GIVE_DATA(TMPSIZE),
-                },
-              ]}
+            <HealthRequest
+              tag="error.handled"
+              timeseries={true}
+              interval="1d"
+              getCategory={handled => (handled ? 'Handled' : 'Crash')}
             >
-              {props => <AreaChart {...props} />}
-            </StyledPanelChart>
-
-            <HealthRequest tag="release" timeseries={true} interval="1d">
               {({data, loading}) => {
                 if (!data) return null;
-                const releaseSet = new Set();
-                const timestampMap = new Map();
-                data.forEach(([timestamp, resultsForTimestamp]) => {
-                  if (!resultsForTimestamp.length) {
-                    return;
-                  }
-
-                  resultsForTimestamp.forEach(({count, release}) => {
-                    releaseSet.add(release.shortVersion);
-                    timestampMap.set(`${timestamp}-${release.shortVersion}`, count);
-                  });
-                });
-
-                const seriesByRelease = Array.from(releaseSet).map(release => {
-                  return {
-                    seriesName: release,
-                    data: data.map(([timestamp]) => {
-                      return {
-                        category: timestamp * 1000,
-                        value: timestampMap.get(`${timestamp}-${release}`) || 0,
-                      };
-                    }),
-                  };
-                });
-
+                console.log('handled', data);
                 return (
-                  <StyledPanelChart
-                    height={200}
-                    startDate={START_DATE}
-                    title={t('Releases')}
-                    series={seriesByRelease}
-                  >
+                  <StyledPanelChart height={200} title={t('Errors')} series={data}>
+                    {props => <AreaChart {...props} />}
+                  </StyledPanelChart>
+                );
+              }}
+            </HealthRequest>
+
+            <HealthRequest
+              tag="release"
+              timeseries={true}
+              interval="1d"
+              getCategory={({shortVersion}) => shortVersion}
+            >
+              {({data, loading}) => {
+                if (!data) return null;
+                return (
+                  <StyledPanelChart height={200} title={t('Releases')} series={data}>
                     {props => <PercentageBarChart {...props} />}
                   </StyledPanelChart>
                 );
@@ -116,22 +71,32 @@ const OrganizationHealthErrors = styled(
           </Flex>
 
           <Flex>
-            <StyledTableChart
-              title="Error Type"
-              headers={['Error type', 'Test', 'Another Test', 'What', 'Total']}
-              data={ERROR_TYPE_DATA}
-              widths={[null, 60, 60, 60, 60]}
-              showRowTotal
-              showColumnTotal
-              shadeRowPercentage
-            />
-            <HealthRequest tag="user" timeseries={false}>
-              {({data, loading}) => (
+            <HealthRequest tag="error.type" timeseries={false} interval="1d">
+              {({data, loading}) => {
+                if (!data) return null;
+                return (
+                  <StyledTableChart
+                    title="Error Type"
+                    headers={['Error type']}
+                    data={data}
+                    widths={[null, 60, 60, 60, 60]}
+                    showColumnTotal
+                    shadeRowPercentage
+                  />
+                );
+              }}
+            </HealthRequest>
+            <HealthRequest
+              tag="user"
+              timeseries={false}
+              getCategory={({user}) => user.label}
+            >
+              {({originalData, loading}) => (
                 <React.Fragment>
                   {!loading && (
                     <StyledTableChart
                       headers={[t('Most Impacted')]}
-                      data={data.map(row => [row, row])}
+                      data={originalData.map(row => [row, row])}
                       widths={[null, 120]}
                       getValue={item =>
                         typeof item === 'number' ? item : item && item.count}
@@ -159,60 +124,67 @@ const OrganizationHealthErrors = styled(
           </Flex>
 
           <Flex>
-            <HealthRequest tag="release" timeseries={false} topk={5}>
-              {({data, loading}) => (
-                <React.Fragment>
-                  {!loading && (
-                    <React.Fragment>
-                      <StyledTableChart
-                        headers={[t('Errors by Release')]}
-                        data={data.map(row => [row, row])}
-                        widths={[null, 120]}
-                        getValue={item =>
-                          typeof item === 'number' ? item : item && item.count}
-                        renderHeaderCell={({getValue, value, columnIndex}) => {
-                          return (
-                            <Flex justify="space-between">
-                              <ReleaseName>{value.release.version}</ReleaseName>
-                              <Project>
-                                {value.topProjects.map(p => (
-                                  <IdBadge key={p.slug} project={p} />
-                                ))}
-                              </Project>
+            <HealthRequest
+              tag="release"
+              timeseries={false}
+              topk={5}
+              getCategory={({shortVersion}) => shortVersion}
+            >
+              {({originalData: data, loading}) => {
+                return (
+                  <React.Fragment>
+                    {!loading && (
+                      <React.Fragment>
+                        <StyledTableChart
+                          headers={[t('Errors by Release')]}
+                          data={data.map(row => [row, row])}
+                          widths={[null, 120]}
+                          getValue={item =>
+                            typeof item === 'number' ? item : item && item.count}
+                          renderHeaderCell={({getValue, value, columnIndex}) => {
+                            return (
+                              <Flex justify="space-between">
+                                <ReleaseName>{value.release.version}</ReleaseName>
+                                <Project>
+                                  {value.topProjects.map(p => (
+                                    <IdBadge key={p.slug} project={p} />
+                                  ))}
+                                </Project>
+                              </Flex>
+                            );
+                          }}
+                          renderDataCell={({getValue, value, columnIndex}) => {
+                            return <Count value={getValue(value)} />;
+                          }}
+                          showRowTotal={false}
+                          showColumnTotal={false}
+                          shadeRowPercentage
+                        />
+                        <StyledPanelChart
+                          height={300}
+                          title={t('Errors By Release')}
+                          showLegend={false}
+                          data={data.map(row => ({
+                            name: row.release.version,
+                            value: row.count,
+                          }))}
+                        >
+                          {({data: panelData}) => (
+                            <Flex>
+                              <LegendWrapper>
+                                <Legend data={panelData} />
+                              </LegendWrapper>
+                              <PieChartWrapper>
+                                <PieChart height={300} data={panelData} />
+                              </PieChartWrapper>
                             </Flex>
-                          );
-                        }}
-                        renderDataCell={({getValue, value, columnIndex}) => {
-                          return <Count value={getValue(value)} />;
-                        }}
-                        showRowTotal={false}
-                        showColumnTotal={false}
-                        shadeRowPercentage
-                      />
-                      <StyledPanelChart
-                        height={300}
-                        title={t('Errors By Release')}
-                        showLegend={false}
-                        data={data.map(row => ({
-                          name: row.release.version,
-                          value: row.count,
-                        }))}
-                      >
-                        {({data: panelData}) => (
-                          <Flex>
-                            <LegendWrapper>
-                              <Legend data={panelData} />
-                            </LegendWrapper>
-                            <PieChartWrapper>
-                              <PieChart height={300} data={panelData} />
-                            </PieChartWrapper>
-                          </Flex>
-                        )}
-                      </StyledPanelChart>
-                    </React.Fragment>
-                  )}
-                </React.Fragment>
-              )}
+                          )}
+                        </StyledPanelChart>
+                      </React.Fragment>
+                    )}
+                  </React.Fragment>
+                );
+              }}
             </HealthRequest>
           </Flex>
 
@@ -223,11 +195,7 @@ const OrganizationHealthErrors = styled(
                 return (
                   <StyledPanelChart
                     height={200}
-                    startDate={START_DATE}
-                    data={data.map(dataObj => ({
-                      name: dataObj['browser.name'],
-                      value: dataObj.count,
-                    }))}
+                    data={data.map(([name, value]) => ({name, value}))}
                     title={t('Browsers')}
                   >
                     {({data: panelData}) => (

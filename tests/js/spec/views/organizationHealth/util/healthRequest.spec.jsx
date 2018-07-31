@@ -28,7 +28,7 @@ describe('HealthRequest', function() {
   );
 
   it('makes requests', async function() {
-    expect(mock).toHaveBeenCalledWith({loading: true, data: null});
+    expect(mock).toHaveBeenCalledWith({loading: true, data: null, originalData: null});
 
     expect(mock).toHaveBeenLastCalledWith({
       loading: false,
