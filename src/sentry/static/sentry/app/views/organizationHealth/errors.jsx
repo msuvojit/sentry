@@ -94,7 +94,7 @@ const OrganizationHealthErrors = styled(
                     seriesName: release,
                     data: data.map(([timestamp]) => {
                       return {
-                        category: timestamp,
+                        category: timestamp * 1000,
                         value: timestampMap.get(`${timestamp}-${release}`) || 0,
                       };
                     }),
