@@ -39,7 +39,7 @@ describe('Health ActionCreator', function() {
 
   it('requests timeseries w/ tag', function() {
     mock = MockApiClient.addMockResponse({
-      url: '/organizations/org-slug/health/graph2/',
+      url: '/organizations/org-slug/health/graph/',
     });
     doHealthRequest(api, {
       timeseries: true,
@@ -55,7 +55,7 @@ describe('Health ActionCreator', function() {
     expect(mock).toHaveBeenCalled();
 
     expect(mock).toHaveBeenLastCalledWith(
-      '/organizations/org-slug/health/graph2/',
+      '/organizations/org-slug/health/graph/',
       expect.objectContaining({
         query: expect.objectContaining({
           project: [project.id],

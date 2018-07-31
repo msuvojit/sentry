@@ -31,7 +31,7 @@ export const doHealthRequest = (
 ) => {
   if (!api) return Promise.reject(new Error('API client not available'));
 
-  const path = timeseries ? (tag ? 'graph2/' : 'graph/') : 'top/';
+  const path = timeseries ? 'graph/' : 'top/';
   const query = {
     tag,
     includePrevious,
