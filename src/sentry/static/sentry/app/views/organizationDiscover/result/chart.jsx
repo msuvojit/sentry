@@ -27,7 +27,7 @@ export default class Result extends React.Component {
     return value;
   }
 
-  getDataForChart(queryData, groupbyFields) {
+  getLineChartData(queryData, groupbyFields) {
     const {aggregations} = this.props.query;
     const aggregate = aggregations[0][2];
 
@@ -62,7 +62,7 @@ export default class Result extends React.Component {
     };
   }
 
-  getBarDataForChart(queryData, groupbyFields) {
+  getBarChartData(queryData, groupbyFields) {
     const {aggregations} = this.props.query;
     const aggregate = aggregations[0][2];
 
@@ -93,8 +93,8 @@ export default class Result extends React.Component {
     const {fields} = this.props.query;
     const {data} = this.props.data;
 
-    const {chartData, dates} = this.getDataForChart(data, fields);
-    const barData = this.getBarDataForChart(data, fields);
+    const {chartData, dates} = this.getLineChartData(data, fields);
+    const barData = this.getBarChartData(data, fields);
 
     return (
       <div>
